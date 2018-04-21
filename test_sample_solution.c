@@ -58,8 +58,9 @@ OS_STK Task5Stk[TASK_STK_SIZE];                                 // Task #5    ta
  *********************************************************************************************************
  */
 // Add your code here!!
-OS_EVENT* MailboxTextSend;
-OS_EVENT* MailboxTextAcknowledge;
+OS_EVENT * TxMbox;
+OS_EVENT * AckMbox;
+
 // End of your code!!
 
 /*
@@ -140,8 +141,9 @@ void TaskStart(void *pdata)
  *********************************************************************************************************
  */
 // Add your code here!!
-MailboxTextSend = OSMboxCreate((void *)0);
-MailboxTextAcknowledge = OSMboxCreate((void *)0);
+    TxMbox = OSMboxCreate((void *)0);
+    AckMbox = OSMboxCreate((void *)0);    
+
 // End of your code!!
     TaskStartCreateTasks();                                     // Create all other tasks
 
@@ -420,24 +422,15 @@ void Task4(void *data)
  *********************************************************************************************************
  */
 // Add your code here!!
-for(;;)
-{
-    // fill the mailbox with the character in txmsg
-    OSMboxPost(MailboxTextSend, (void*)&txmsg);
-    // question: why does the txmsg does not need to be defined static?
-    // answer: because the Task will never go to the upper part and only
-    // resides in the infinite loop -> stack will be saved when context is switched
-
-    // wait for the acknowledge by the receiver
-    OSMboxPend(MailboxTextAcknowledge, 0, &err);
-    ++txmsg;
-
-    if (txmsg == 'Z' + 1)
-    {
-        txmsg = 'A';
+    for (;;){
+        OSMboxPost(TxMbox, (void *)&txmsg);
+        OSMboxPend(AckMbox, 0, &err);
+        txmsg++;
+        if (txmsg == 'Z' + 1)
+            txmsg = 'A';
     }
-}
-// End of your code!!
+
+// End of your code!!    
 }
 /*$PAGE*/
 /*
@@ -455,7 +448,7 @@ void Task5(void *data)
     /* @Feb 17th, 2010 By: Amr Ali Abdel-Naby */
     /* Added a string buffer to make the example work on Vista */
     char s[2];
-
+    
     data = data;
 /*
  *********************************************************************************************************
@@ -469,19 +462,14 @@ void Task5(void *data)
  *      PC_DispStr(70, 18, s, DISP_FGND_YELLOW + DISP_BGND_BLUE);
  *********************************************************************************************************
  */
-// Add your code here!!
-    for(;;)
-    {
-        rxmsg = (char*)OSMboxPend(MailboxTextSend, 0, &err);
-        // question: Do I need to check if return value of OSMboxPend changed?
-        // answer: No, the functionality "new data received"
-        // is already incorporated in the OSMboxPend from the OS
-        sprintf(s,"%1c",rxmsg[0]);
+// Add your code here!!    
+    for (;;){
+        rxmsg = (char *)OSMboxPend(TxMbox, 0, &err);
+        sprintf(s, "%1c", rxmsg[0]);
         PC_DispStr(70, 18, s, DISP_FGND_YELLOW + DISP_BGND_BLUE);
         OSTimeDlyHMSM(0, 0, 1, 0);
-        OSMboxPost(MailboxTextAcknowledge, (void*)1);
-    }
-
+        OSMboxPost(AckMbox, (void *) 1);        
+    }    
 // End of your code!!
 }
 /*$PAGE*/
